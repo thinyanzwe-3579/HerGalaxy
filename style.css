@@ -285,17 +285,23 @@ body {
     align-items: center;
 }
 
-/* The Sun orb */
+/* The Sun orb — 3D globe sits inside, glow comes from box-shadow */
 .sun-orb {
     width: min(420px, 70vw);
     height: min(420px, 70vw);
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #fff3c4 0%, #ffb347 30%, #ff7518 60%, #c1440e 100%);
     box-shadow: 0 0 80px rgba(255, 140, 40, 0.5),
                 0 0 160px rgba(255, 100, 20, 0.35),
                 0 0 240px rgba(255, 80, 0, 0.2);
     animation: sunPulse 6s ease-in-out infinite;
     position: relative;
+}
+
+.sun-orb canvas,
+.planet-visual canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 @keyframes sunPulse {
@@ -379,16 +385,10 @@ body {
 }
 
 .planet-visual {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    margin-bottom: 28px;
+    width: 170px;
+    height: 170px;
+    margin: 0 auto 28px;
     position: relative;
-    animation: spin 40s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 
 .planet-card h3 {
@@ -432,6 +432,10 @@ body {
 }
 
 /* ============ GALAXY ============ */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .galaxy-section {
     background: radial-gradient(ellipse at 70% 50%, rgba(80, 40, 120, 0.15) 0%, transparent 60%);
 }
@@ -479,6 +483,13 @@ body {
 
 .footer-faint:hover {
     color: rgba(232, 200, 122, 0.6);
+}
+
+.footer-credit {
+    margin-top: 36px;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    color: rgba(138, 147, 168, 0.35);
 }
 
 /* ============ SCROLL REVEAL ============ */

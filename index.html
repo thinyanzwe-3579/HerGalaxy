@@ -3,95 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyGalaxy</title>
+    <title>The Descent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Animated starfield background -->
-    <canvas id="starfield"></canvas>
+    <!-- Full-screen 3D scene -->
+    <canvas id="scene"></canvas>
 
-    <!-- Navigation -->
-    <nav id="nav">
-        <div class="nav-logo">MY<span>GALAXY</span></div>
-        <ul class="nav-links">
-            <li><a href="#home">Home</a></li>
-            <li><a href="#sun">The Sun</a></li>
-            <li><a href="#planets">Planets</a></li>
-            <li><a href="#galaxy">The Milky Way</a></li>
-        </ul>
-    </nav>
+    <!-- Fixed overlay (text, HUD, intro) -->
+    <div id="overlay">
 
-    <!-- HERO -->
-    <header id="home" class="hero">
-        <div class="hero-content">
-            <p class="hero-eyebrow">A Journey Through The Cosmos</p>
-            <h1 class="hero-title">MyGalaxy</h1>
-            <p class="hero-subtitle">Exploring the beauty, history, and wonder of our solar system — one world at a time.</p>
-            <a href="#sun" class="hero-cta">Begin the Journey</a>
+        <!-- Opening: deep space, no planets -->
+        <div id="intro">
+            <p class="intro-eyebrow">A Journey Through The Solar System</p>
+            <p class="intro-hint">Scroll to begin the descent</p>
+            <!-- Hidden message — only revealed to those who pay attention -->
+            <div class="hidden-message">For my Precious Little Galaxy</div>
         </div>
-        <!-- Hidden message — only revealed to those who pay attention -->
-        <div class="hidden-message" title="">For my Precious Little Galaxy</div>
-        <div class="scroll-indicator">
-            <span></span>
-            <p>Scroll</p>
-        </div>
-    </header>
 
-    <!-- THE SUN -->
-    <section id="sun" class="section">
-        <div class="section-visual">
-            <div class="sun-orb" id="sunGlobe"></div>
-        </div>
-        <div class="section-text reveal">
-            <p class="section-tag">001 — The Heart of It All</p>
-            <h2>The Sun</h2>
-            <p class="lead">A 4.6 billion year old sphere of glowing plasma, holding everything we know in a gentle gravitational embrace.</p>
-            <p>The Sun accounts for 99.86% of all the mass in our solar system. Its core burns at 15 million degrees Celsius, fusing 600 million tons of hydrogen into helium every single second. The light that warms your face left its surface roughly eight minutes ago, travelling 150 million kilometres to reach you.</p>
-            <div class="stats">
-                <div class="stat"><span class="stat-num">1.39M</span><span class="stat-label">km diameter</span></div>
-                <div class="stat"><span class="stat-num">5,500°C</span><span class="stat-label">surface temp</span></div>
-                <div class="stat"><span class="stat-num">4.6B</span><span class="stat-label">years old</span></div>
-            </div>
-        </div>
-    </section>
+        <!-- Planet info panels injected by JS -->
+        <div id="info-layer"></div>
 
-    <!-- PLANETS -->
-    <section id="planets" class="planets-section">
-        <div class="planets-header reveal">
-            <p class="section-tag">002 — Eight Worlds</p>
-            <h2>The Planets</h2>
-            <p class="lead">Each world tells its own story — of fire and ice, of storms that could swallow the Earth whole, of rings made from a billion shards of light.</p>
+        <!-- HUD -->
+        <div id="hud">
+            <div id="hud-name"></div>
+            <div id="hud-track"><span id="hud-fill"></span></div>
         </div>
-        <div class="planet-grid" id="planetGrid">
-            <!-- Planets injected by JS -->
-        </div>
-    </section>
 
-    <!-- THE MILKY WAY -->
-    <section id="galaxy" class="section galaxy-section">
-        <div class="section-text reveal">
-            <p class="section-tag">003 — Our Home Among The Stars</p>
-            <h2>The Milky Way</h2>
-            <p class="lead">A barred spiral galaxy containing somewhere between 100 and 400 billion stars — and our Sun is just one of them.</p>
-            <p>Spanning over 100,000 light-years across, the Milky Way is so vast that light itself takes a hundred millennia to cross it. Our entire solar system orbits the galactic centre once every 225 million years — a single trip we call a cosmic year. The last time we were in this exact spot, dinosaurs were yet to roam the Earth.</p>
-            <p>And in all of this immensity — billions of stars, countless worlds — there is still only one of everything that matters most.</p>
-        </div>
-        <div class="section-visual">
-            <div class="galaxy-spiral"></div>
-        </div>
-    </section>
+    </div>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-title">MYGALAXY</div>
-        <p class="footer-text">Made with wonder, for the love of the stars.</p>
-        <p class="footer-faint">Look closely. The brightest things are often the quietest.</p>
-        <p class="footer-credit">Planet textures by Solar System Scope (CC BY 4.0), based on NASA imagery.</p>
-    </footer>
+    <!-- Faint texture attribution -->
+    <div class="credit">Textures: Solar System Scope (CC BY 4.0) · based on NASA imagery</div>
+
+    <!-- Tall spacer that creates the scroll length -->
+    <div id="scroll-space"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="script.js"></script>

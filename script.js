@@ -1,5 +1,5 @@
 /* ==================================================================
-   The Descent — a scroll-driven journey from Neptune inward to the Sun
+   The Descent — premium scroll journey: galaxy → planets → the Sun
    ================================================================== */
 
 /* ---------- Bodies, ordered from the farthest world inward ---------- */
@@ -7,47 +7,48 @@ const bodies = [
     { name: "Neptune", desig: "01 / Outer Dark", texture: "textures/neptune.jpg",
       desc: "The outermost world. A frozen blue giant, lashed by the fastest winds in the solar system.",
       data: "4.5 BILLION KM · −214°C · 16 MOONS",
-      radius: 1.8, tilt: 0.49, spin: 0.0016 },
+      radius: 1.8, tilt: 0.49, spin: 0.0015, atmo: 0x2f6db5, atmoPow: 3.2, atmoInt: 0.9 },
 
     { name: "Uranus", desig: "02 / The Tilted World", texture: "textures/uranus.jpg",
       desc: "The world that lies on its side, slowly rolling through the dark.",
       data: "2.9 BILLION KM · AXIAL TILT 98°",
-      radius: 1.75, tilt: 1.71, spin: 0.0016 },
+      radius: 1.75, tilt: 1.71, spin: 0.0015, atmo: 0x9fe7e4, atmoPow: 3.4, atmoInt: 0.8 },
 
     { name: "Saturn", desig: "03 / The Crown", texture: "textures/saturn.jpg", ring: "textures/saturn_ring.png",
       desc: "The crowned giant, ringed by a billion shards of ice — yet those rings are barely ten metres thick.",
       data: "1.4 BILLION KM · 146 MOONS",
-      radius: 2.1, tilt: 0.47, spin: 0.0024 },
+      radius: 2.1, tilt: 0.47, spin: 0.0022, atmo: 0xe7d6a6, atmoPow: 4.0, atmoInt: 0.5 },
 
     { name: "Jupiter", desig: "04 / The King", texture: "textures/jupiter.jpg",
       desc: "The largest of all. A single storm here, the Great Red Spot, has raged for centuries.",
       data: "778 MILLION KM · 95 MOONS",
-      radius: 2.5, tilt: 0.05, spin: 0.0028 },
+      radius: 2.5, tilt: 0.05, spin: 0.0026, atmo: 0xdcbf97, atmoPow: 4.0, atmoInt: 0.55 },
 
     { name: "Mars", desig: "05 / The Red Frontier", texture: "textures/mars.jpg",
       desc: "Cold, silent, and rust-red. The frontier we dream of one day calling a second home.",
       data: "228 MILLION KM · −63°C · 2 MOONS",
-      radius: 1.15, tilt: 0.44, spin: 0.0022 },
+      radius: 1.2, tilt: 0.44, spin: 0.0021, atmo: 0xd9805a, atmoPow: 4.5, atmoInt: 0.4 },
 
-    { name: "Earth", desig: "06 / Home", texture: "textures/earth.jpg",
+    { name: "Earth", desig: "06 / Home", earth: true,
+      day: "textures/earth_day.jpg", night: "textures/earth_night.jpg", clouds: "textures/earth_clouds.jpg",
       desc: "A pale blue dot. The only world we have ever known to hold life — and everyone who ever lived.",
       data: "149.6 MILLION KM · ONE OF A KIND",
-      radius: 1.5, tilt: 0.41, spin: 0.0022 },
+      radius: 1.55, tilt: 0.41, spin: 0.0020, atmo: 0x6db8ff, atmoPow: 3.0, atmoInt: 1.25 },
 
     { name: "Venus", desig: "07 / The Veiled Twin", texture: "textures/venus.jpg",
       desc: "Earth's twin in size, hidden beneath endless clouds of acid. The hottest world of all.",
       data: "108 MILLION KM · 465°C",
-      radius: 1.45, tilt: 0.05, spin: 0.0012 },
+      radius: 1.5, tilt: 0.05, spin: 0.0011, atmo: 0xf0d9a0, atmoPow: 3.2, atmoInt: 0.95 },
 
     { name: "Mercury", desig: "08 / The Swift", texture: "textures/mercury.jpg",
       desc: "The swiftest world, scorched and cratered, racing around the Sun every 88 days.",
       data: "58 MILLION KM · 88-DAY YEAR",
-      radius: 1.05, tilt: 0.03, spin: 0.0016 },
+      radius: 1.05, tilt: 0.03, spin: 0.0015, atmo: null },
 
-    { name: "The Sun", desig: "09 / The Heart Of It All", texture: "textures/sun.jpg", emissive: true,
+    { name: "The Sun", desig: "09 / The Heart Of It All", texture: "textures/sun.jpg", sun: true,
       desc: "The star that holds us all. Ninety-nine percent of everything we know, bound together in light.",
       data: "THE STAR · 15 MILLION °C CORE",
-      radius: 3.0, tilt: 0.12, spin: 0.0009 },
+      radius: 3.0, tilt: 0.12, spin: 0.0008 },
 ];
 
 const N = bodies.length;
@@ -55,8 +56,8 @@ const N = bodies.length;
 /* ---------- Math helpers ---------- */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
-const smooth = (t) => t * t * (3 - 2 * t);              // smoothstep
-const easeIn = (t) => t * t * t;                         // accelerate
+const smooth = (t) => t * t * (3 - 2 * t);
+const smoother = (t) => t * t * t * (t * (t * 6 - 15) + 10);   // smootherstep
 
 /* ---------- Build the HTML info panels ---------- */
 const infoLayer = document.getElementById('info-layer');
@@ -81,159 +82,298 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputEncoding = THREE.sRGBEncoding;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 4000);
 camera.position.set(0, 0, 0);
 camera.lookAt(0, 0, -1);
 
 const texLoader = new THREE.TextureLoader();
+const loadTex = (url, srgb = true) => {
+    const t = texLoader.load(url);
+    if (srgb) t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return t;
+};
 
-/* ---------- Deep-space background (Milky Way) ---------- */
-const skyTex = texLoader.load('textures/milkyway.jpg');
-skyTex.encoding = THREE.sRGBEncoding;
+/* Direction the sunlight comes from (world space) */
+const LIGHT_DIR = new THREE.Vector3(-2.4, 1.7, 1.5).normalize();
+
+/* ---------- Deep-space background (8K Milky Way) ---------- */
+const skyTex = loadTex('textures/milkyway.jpg');
 const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(600, 60, 60),
+    new THREE.SphereGeometry(900, 64, 64),
     new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide })
 );
 scene.add(sky);
 
+/* A faint field of foreground stars for depth + parallax on the intro dive */
+(function addStarfield() {
+    const count = 1800;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        const r = 200 + Math.random() * 500;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i * 3]     = r * Math.sin(ph) * Math.cos(th);
+        pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+        pos[i * 3 + 2] = r * Math.cos(ph);
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+        color: 0xffffff, size: 1.5, sizeAttenuation: true,
+        transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    scene.add(new THREE.Points(geo, mat));
+})();
+
 /* ---------- Lighting ---------- */
-const ambient = new THREE.AmbientLight(0xffffff, 0.22);
-scene.add(ambient);
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-sunLight.position.set(-2.5, 1.4, 2.5);
+scene.add(new THREE.AmbientLight(0xffffff, 0.14));
+const sunLight = new THREE.DirectionalLight(0xfff4e6, 2.0);
+sunLight.position.copy(LIGHT_DIR);
 scene.add(sunLight);
 
-/* ---------- Build each body's mesh (created once, shown one at a time) ---------- */
-const meshes = bodies.map((b) => {
+/* ---------- Shaders ---------- */
+// Atmospheric rim glow: brightest at the limb, concentrated on the lit side.
+function atmosphereMaterial(colorHex, power, intensity, lit = true) {
+    return new THREE.ShaderMaterial({
+        uniforms: {
+            uColor: { value: new THREE.Color(colorHex) },
+            uPower: { value: power },
+            uIntensity: { value: intensity },
+            uLightDir: { value: LIGHT_DIR.clone() },
+            uLit: { value: lit ? 1.0 : 0.0 },
+            uOpacity: { value: 1.0 }
+        },
+        vertexShader: `
+            varying vec3 vN; varying vec3 vWP;
+            void main() {
+                vN = normalize(mat3(modelMatrix) * normal);
+                vWP = (modelMatrix * vec4(position, 1.0)).xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }`,
+        fragmentShader: `
+            uniform vec3 uColor; uniform float uPower; uniform float uIntensity;
+            uniform vec3 uLightDir; uniform float uLit; uniform float uOpacity;
+            varying vec3 vN; varying vec3 vWP;
+            void main() {
+                vec3 V = normalize(cameraPosition - vWP);
+                float rim = pow(1.0 - max(dot(V, vN), 0.0), uPower);
+                float litf = max(dot(vN, uLightDir), 0.0);
+                float g = rim * uIntensity * mix(1.0, 0.18 + 0.82 * litf, uLit);
+                gl_FragColor = vec4(uColor, g * uOpacity);
+            }`,
+        transparent: true, blending: THREE.AdditiveBlending,
+        side: THREE.FrontSide, depthWrite: false
+    });
+}
+
+// Earth surface: day texture on the lit side, glowing city lights on the dark side.
+function earthMaterial(dayTex, nightTex) {
+    return new THREE.ShaderMaterial({
+        uniforms: {
+            uDay: { value: dayTex }, uNight: { value: nightTex },
+            uLightDir: { value: LIGHT_DIR.clone() }, uOpacity: { value: 1.0 }
+        },
+        vertexShader: `
+            varying vec2 vUv; varying vec3 vN;
+            void main() {
+                vUv = uv;
+                vN = normalize(mat3(modelMatrix) * normal);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }`,
+        fragmentShader: `
+            uniform sampler2D uDay; uniform sampler2D uNight;
+            uniform vec3 uLightDir; uniform float uOpacity;
+            varying vec2 vUv; varying vec3 vN;
+            vec3 toLin(vec3 c){ return pow(c, vec3(2.2)); }
+            void main() {
+                float lambert = dot(normalize(vN), uLightDir);
+                float t = smoothstep(-0.12, 0.32, lambert);
+                vec3 day = toLin(texture2D(uDay, vUv).rgb) * clamp(lambert, 0.05, 1.0);
+                vec3 night = toLin(texture2D(uNight, vUv).rgb) * 1.5;
+                vec3 col = mix(night, day, t);
+                gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), uOpacity);
+            }`,
+        transparent: true
+    });
+}
+
+/* ---------- Body builders (lazy: built on first need) ---------- */
+const built = new Array(N).fill(null);
+
+function buildBody(i) {
+    if (built[i]) return built[i];
+    const b = bodies[i];
     const group = new THREE.Group();
     group.rotation.z = b.tilt;
 
-    const mat = new THREE.MeshStandardMaterial({
-        map: texLoader.load(b.texture),
-        roughness: 1,
-        metalness: 0,
-        transparent: true,
-        opacity: 1
-    });
-    mat.map.encoding = THREE.sRGBEncoding;
+    const shaderMats = [];      // materials whose fade is via uOpacity uniform
+    const stdMats = [];         // materials whose fade is via .opacity
+    let surface, clouds = null;
 
-    if (b.emissive) {
-        mat.emissive = new THREE.Color(0xff9933);
-        mat.emissiveMap = mat.map;
-        mat.emissiveIntensity = 1.0;
+    if (b.earth) {
+        const mat = earthMaterial(loadTex(b.day), loadTex(b.night));
+        shaderMats.push(mat);
+        surface = new THREE.Mesh(new THREE.SphereGeometry(b.radius, 128, 128), mat);
+        group.add(surface);
+
+        // Clouds
+        const cloudMat = new THREE.MeshStandardMaterial({
+            alphaMap: loadTex(b.clouds, false), transparent: true, opacity: 1,
+            color: 0xffffff, depthWrite: false, roughness: 1, metalness: 0
+        });
+        stdMats.push(cloudMat);
+        clouds = new THREE.Mesh(new THREE.SphereGeometry(b.radius * 1.012, 96, 96), cloudMat);
+        group.add(clouds);
+    } else if (b.sun) {
+        const mat = new THREE.MeshBasicMaterial({ map: loadTex(b.texture), transparent: true });
+        stdMats.push(mat);
+        surface = new THREE.Mesh(new THREE.SphereGeometry(b.radius, 128, 128), mat);
+        group.add(surface);
+
+        // Warm corona — layered additive shells (full halo, not light-dependent)
+        [[1.06, 1.1], [1.18, 0.6], [1.4, 0.3]].forEach(([scale, inten]) => {
+            const cm = atmosphereMaterial(0xffb24d, 2.4, inten, false);
+            shaderMats.push(cm);
+            group.add(new THREE.Mesh(new THREE.SphereGeometry(b.radius * scale, 64, 64), cm));
+        });
+    } else {
+        const mat = new THREE.MeshStandardMaterial({
+            map: loadTex(b.texture), roughness: 1, metalness: 0, transparent: true
+        });
+        stdMats.push(mat);
+        surface = new THREE.Mesh(new THREE.SphereGeometry(b.radius, 128, 128), mat);
+        group.add(surface);
+
+        if (b.ring) {
+            const inner = b.radius * 1.35, outer = b.radius * 2.3;
+            const ringGeo = new THREE.RingGeometry(inner, outer, 160);
+            const p = ringGeo.attributes.position, v = new THREE.Vector3(), mid = (inner + outer) / 2;
+            for (let k = 0; k < p.count; k++) {
+                v.fromBufferAttribute(p, k);
+                ringGeo.attributes.uv.setXY(k, v.length() < mid ? 0 : 1, 1);
+            }
+            const ringMat = new THREE.MeshBasicMaterial({
+                map: loadTex(b.ring), side: THREE.DoubleSide, transparent: true, opacity: 1
+            });
+            stdMats.push(ringMat);
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2.15;
+            group.add(ring);
+        }
     }
 
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(b.radius, 96, 96), mat);
-    group.add(sphere);
-
-    let ringMat = null;
-    if (b.ring) {
-        const inner = b.radius * 1.35, outer = b.radius * 2.25;
-        const ringGeo = new THREE.RingGeometry(inner, outer, 128);
-        const pos = ringGeo.attributes.position;
-        const v = new THREE.Vector3();
-        const mid = (inner + outer) / 2;
-        for (let k = 0; k < pos.count; k++) {
-            v.fromBufferAttribute(pos, k);
-            ringGeo.attributes.uv.setXY(k, v.length() < mid ? 0 : 1, 1);
-        }
-        const ringTex = texLoader.load(b.ring);
-        ringTex.encoding = THREE.sRGBEncoding;
-        ringMat = new THREE.MeshBasicMaterial({
-            map: ringTex, side: THREE.DoubleSide, transparent: true, opacity: 0.92
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = Math.PI / 2.1;
-        group.add(ring);
+    // Atmosphere rim glow (skipped for airless Mercury and the Sun)
+    if (b.atmo) {
+        // two shells: a tight bright rim + a soft outer halo (fake bloom bleed)
+        const a1 = atmosphereMaterial(b.atmo, b.atmoPow, b.atmoInt);
+        const a2 = atmosphereMaterial(b.atmo, b.atmoPow * 0.6, b.atmoInt * 0.5);
+        shaderMats.push(a1, a2);
+        group.add(new THREE.Mesh(new THREE.SphereGeometry(b.radius * 1.02, 96, 96), a1));
+        group.add(new THREE.Mesh(new THREE.SphereGeometry(b.radius * 1.09, 96, 96), a2));
     }
 
     group.visible = false;
     scene.add(group);
-    return { group, sphere, ringMat };
-});
 
-/* ---------- Scroll state ---------- */
-const INTRO = 0.55;                  // units of "pure space" before Neptune begins
-const TIMELINE_MAX = N - 0.5;        // last body ends at its hero (does not fly past)
-let targetT = 0;
-let renderT = 0;
-
-function getScrollProgress() {
-    const max = document.body.scrollHeight - window.innerHeight;
-    return max > 0 ? clamp(window.scrollY / max, 0, 1) : 0;
+    built[i] = {
+        group, surface, clouds, shaderMats, stdMats, spin: b.spin,
+        setOpacity(o) {
+            shaderMats.forEach(m => m.uniforms.uOpacity.value = o);
+            stdMats.forEach(m => { m.opacity = o; });
+        }
+    };
+    return built[i];
 }
 
+/* ---------- Scroll → timeline ---------- */
+const INTRO = 1.2;                       // galaxy-zoom units before Neptune
+const TIMELINE_MAX = INTRO + (N - 0.5);  // last body settles at its hero
+let targetT = 0, renderT = 0, G = 0;
+
+document.getElementById('scroll-space').style.height = Math.round(TIMELINE_MAX * 150) + 'vh';
+
 function onScroll() {
-    const G = getScrollProgress();
-    const raw = G * (TIMELINE_MAX + INTRO) - INTRO;
-    targetT = clamp(raw, 0, TIMELINE_MAX);
-
-    // Intro overlay fades out as soon as we begin moving
-    const intro = document.getElementById('intro');
-    intro.style.opacity = clamp(1 - G * 14, 0, 1);
-
-    // HUD progress
-    document.getElementById('hud-fill').style.width = (G * 100).toFixed(1) + '%';
-    document.getElementById('hud').classList.toggle('visible', G > 0.01 && G < 0.995);
+    const max = document.body.scrollHeight - window.innerHeight;
+    G = max > 0 ? clamp(window.scrollY / max, 0, 1) : 0;
+    targetT = G * TIMELINE_MAX;
 }
 window.addEventListener('scroll', onScroll, { passive: true });
 
-/* ---------- Position a body along its local progress p ∈ [0,1] ---------- */
-const Z_FAR = -620, Z_HERO = -3.4, Z_PAST = 7;
-const TOP_TARGET = 0.45;             // where the top of the planet sits at the hero moment
+/* ---------- Placement (gentle harmonic approach, soft fly-past) ---------- */
+const Z_FAR = -340, Z_HERO = -3.4, Z_PAST = 7, TOP_TARGET = 0.5;
 
-function placeBody(idx, p) {
-    const { group } = meshes[idx];
-    const R = bodies[idx].radius;
-    const yHero = TOP_TARGET - R;     // push centre down so only the upper portion shows
-
+function placeBody(b, group, p) {
+    const yHero = TOP_TARGET - b.radius;
     let z, y;
     if (p <= 0.5) {
-        const a = smooth(p / 0.5);    // approach
-        z = lerp(Z_FAR, Z_HERO, a);
+        const a = smoother(p / 0.5);
+        z = 1 / lerp(1 / Z_FAR, 1 / Z_HERO, a);   // constant angular growth = gentle
         y = lerp(0, yHero, a);
     } else {
-        const a = easeIn((p - 0.5) / 0.5); // fly past, downward and behind
-        z = lerp(Z_HERO, Z_PAST, a);
-        y = lerp(yHero, yHero - 11, a);
+        const q = smoother((p - 0.5) / 0.5);
+        z = lerp(Z_HERO, Z_PAST, q);
+        y = lerp(yHero, yHero - 12, q);
     }
     group.position.set(0, y, z);
 }
 
-/* ---------- Update which panel is visible ---------- */
-function updatePanels(active, p) {
-    panels.forEach((panel, i) => {
-        const on = (i === active) && p > 0.3 && p < 0.82;
-        panel.classList.toggle('active', on);
-    });
+/* ---------- Panels + HUD ---------- */
+function updateUI(inIntro, active, p) {
+    panels.forEach((panel, i) =>
+        panel.classList.toggle('active', !inIntro && i === active && p > 0.32 && p < 0.8));
+
+    const introEl = document.getElementById('intro');
+    const introFade = inIntro ? clamp(1 - smoother(clamp(renderT / INTRO, 0, 1)) * 1.3, 0, 1) : 0;
+    introEl.style.opacity = introFade;
+
+    const hud = document.getElementById('hud');
+    hud.classList.toggle('visible', !inIntro && G < 0.992);
     document.getElementById('hud-name').textContent = bodies[active].name.toUpperCase();
+    document.getElementById('hud-fill').style.width = (G * 100).toFixed(1) + '%';
 }
 
-/* ---------- Main render loop ---------- */
+/* ---------- Render loop ---------- */
+let lastFov = 45;
 function render() {
-    // Smooth the scroll value for a cinematic, weighty feel
-    renderT += (targetT - renderT) * 0.085;
+    renderT += (targetT - renderT) * 0.08;
 
-    const active = clamp(Math.floor(renderT + 1e-4), 0, N - 1);
-    const p = clamp(renderT - active, 0, 1);
+    const inIntro = renderT < INTRO;
+    let active = 0, p = 0;
+    if (!inIntro) {
+        const bt = renderT - INTRO;
+        active = clamp(Math.floor(bt), 0, N - 1);
+        p = clamp(bt - active, 0, 1);
+    }
 
-    // Show only the active body; hide the rest
-    meshes.forEach((m, i) => { m.group.visible = (i === active); });
-    placeBody(active, p);
-    meshes[active].sphere.rotation.y += bodies[active].spin;
+    // Camera: dive into the galaxy during the intro, then settle for the descent
+    if (inIntro) {
+        const e = smoother(clamp(renderT / INTRO, 0, 1));
+        const fov = lerp(70, 45, e);
+        if (fov !== lastFov) { camera.fov = fov; camera.updateProjectionMatrix(); lastFov = fov; }
+        camera.position.z = lerp(14, 0, e);
+    } else {
+        if (lastFov !== 45) { camera.fov = 45; camera.updateProjectionMatrix(); lastFov = 45; }
+        camera.position.z = 0;
+    }
 
-    // Fade the body in from nothing as it begins its approach, so the
-    // opening frame (and each hand-off) is clean, empty space.
-    const fade = smooth(clamp(p / 0.14, 0, 1));
-    meshes[active].sphere.material.opacity = fade;
-    if (meshes[active].ringMat) meshes[active].ringMat.opacity = 0.92 * fade;
+    // Show only the active body (hidden entirely during the intro)
+    for (let i = 0; i < N; i++) if (built[i]) built[i].group.visible = false;
 
-    // Slow drift of the starfield + faint parallax with the journey
-    sky.rotation.y += 0.0002;
-    sky.rotation.x = renderT * 0.01;
+    if (!inIntro) {
+        const obj = buildBody(active);
+        if (active + 1 < N) buildBody(active + 1);          // preload the next world
+        obj.group.visible = true;
+        placeBody(bodies[active], obj.group, p);
+        obj.surface.rotation.y += obj.spin;
+        if (obj.clouds) obj.clouds.rotation.y += obj.spin * 1.3;
+        obj.setOpacity(smoother(clamp(p / 0.22, 0, 1)));    // gentle fade-in from the void
+    }
 
-    updatePanels(active, p);
+    // Living sky
+    sky.rotation.y += 0.00018;
 
+    updateUI(inIntro, active, p);
     renderer.render(scene, camera);
     requestAnimationFrame(render);
 }
@@ -248,5 +388,6 @@ window.addEventListener('resize', resize);
 
 /* ---------- Boot ---------- */
 resize();
+buildBody(0);   // Neptune ready before the intro ends
 onScroll();
 render();

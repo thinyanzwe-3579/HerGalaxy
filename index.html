@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Descent</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="fonts/fonts.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,10 +15,11 @@
     <!-- Fixed overlay (text, HUD, intro) -->
     <div id="overlay">
 
-        <!-- Opening: deep space, no planets -->
+        <!-- Opening: the galaxy -->
         <div id="intro">
-            <p class="intro-eyebrow">A Journey Through The Solar System</p>
-            <p class="intro-hint">Scroll to begin the descent</p>
+            <p class="intro-eyebrow">The Milky Way</p>
+            <p class="intro-title-sub">One hundred billion worlds.<br>We begin with the farthest.</p>
+            <p class="intro-hint">Scroll to descend</p>
             <!-- Hidden message — only revealed to those who pay attention -->
             <div class="hidden-message">For my Precious Little Galaxy</div>
         </div>
@@ -42,7 +41,7 @@
     <!-- Tall spacer that creates the scroll length -->
     <div id="scroll-space"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="lib/three.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

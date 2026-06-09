@@ -48,6 +48,15 @@ body {
     overflow: hidden;
 }
 
+/* Cinematic vignette — darkens the corners for a premium, framed feel */
+#overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.45) 100%);
+}
+
 /* The spacer that gives the page its scroll length (set in JS too) */
 #scroll-space {
     position: relative;
@@ -72,10 +81,20 @@ body {
 .intro-eyebrow {
     font-family: "IBM Plex Mono", monospace;
     text-transform: uppercase;
-    letter-spacing: 6px;
-    font-size: 0.8rem;
+    letter-spacing: 8px;
+    font-size: 0.9rem;
+    color: var(--white);
+    margin-bottom: 22px;
+    text-shadow: 0 0 40px rgba(143, 182, 255, 0.4);
+}
+
+.intro-title-sub {
+    font-weight: 300;
+    font-size: 1.15rem;
+    line-height: 1.7;
     color: var(--grey);
     margin-bottom: 30vh;
+    text-shadow: 0 0 30px rgba(0,0,0,0.8);
 }
 
 .intro-hint {

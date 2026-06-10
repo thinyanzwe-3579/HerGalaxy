@@ -79,7 +79,8 @@ const panels = [...document.querySelectorAll('.planet-info')];
 const canvas = document.getElementById('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.outputEncoding = THREE.sRGBEncoding;
+// Output stays LINEAR — bloom is computed in linear/HDR space and a final
+// GammaCorrection pass encodes to sRGB for the display (see setupComposer).
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 4000);
@@ -137,7 +138,7 @@ scene.add(sunLight);
 function atmosphereMaterial(colorHex, power, intensity, lit = true) {
     return new THREE.ShaderMaterial({
         uniforms: {
-            uColor: { value: new THREE.Color(colorHex) },
+            uColor: { value: new THREE.Color(colorHex).convertSRGBToLinear() },
             uPower: { value: power },
             uIntensity: { value: intensity },
             uLightDir: { value: LIGHT_DIR.clone() },
@@ -190,10 +191,26 @@ function earthMaterial(dayTex, nightTex) {
                 float lambert = dot(normalize(vN), uLightDir);
                 float t = smoothstep(-0.12, 0.32, lambert);
                 vec3 day = toLin(texture2D(uDay, vUv).rgb) * clamp(lambert, 0.05, 1.0);
-                vec3 night = toLin(texture2D(uNight, vUv).rgb) * 1.5;
+                vec3 night = toLin(texture2D(uNight, vUv).rgb) * 1.8;   // city lights bloom on the dark side
                 vec3 col = mix(night, day, t);
-                gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), uOpacity);
+                gl_FragColor = vec4(col, uOpacity);   // linear out
             }`,
+        transparent: true
+    });
+}
+
+// The Sun: emits its texture in HDR (values > 1) so bloom blazes around it.
+function sunMaterial(tex) {
+    return new THREE.ShaderMaterial({
+        uniforms: { uMap: { value: tex }, uBoost: { value: 3.2 }, uOpacity: { value: 1.0 } },
+        vertexShader: `
+            varying vec2 vUv;
+            void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+        fragmentShader: `
+            uniform sampler2D uMap; uniform float uBoost; uniform float uOpacity;
+            varying vec2 vUv;
+            vec3 toLin(vec3 c){ return pow(c, vec3(2.2)); }
+            void main() { gl_FragColor = vec4(toLin(texture2D(uMap, vUv).rgb) * uBoost, uOpacity); }`,
         transparent: true
     });
 }
@@ -226,14 +243,15 @@ function buildBody(i) {
         clouds = new THREE.Mesh(new THREE.SphereGeometry(b.radius * 1.012, 96, 96), cloudMat);
         group.add(clouds);
     } else if (b.sun) {
-        const mat = new THREE.MeshBasicMaterial({ map: loadTex(b.texture), transparent: true });
-        stdMats.push(mat);
+        const mat = sunMaterial(loadTex(b.texture));
+        shaderMats.push(mat);
         surface = new THREE.Mesh(new THREE.SphereGeometry(b.radius, 128, 128), mat);
         group.add(surface);
 
-        // Warm corona — layered additive shells (full halo, not light-dependent)
-        [[1.06, 1.1], [1.18, 0.6], [1.4, 0.3]].forEach(([scale, inten]) => {
-            const cm = atmosphereMaterial(0xffb24d, 2.4, inten, false);
+        // Warm corona — a couple of bright additive shells; bloom turns these
+        // into the Sun's blazing, smooth halo.
+        [[1.04, 2.2], [1.16, 1.1]].forEach(([scale, inten]) => {
+            const cm = atmosphereMaterial(0xffaa3d, 2.2, inten, false);
             shaderMats.push(cm);
             group.add(new THREE.Mesh(new THREE.SphereGeometry(b.radius * scale, 64, 64), cm));
         });
@@ -263,14 +281,12 @@ function buildBody(i) {
         }
     }
 
-    // Atmosphere rim glow (skipped for airless Mercury and the Sun)
+    // Atmosphere rim glow (skipped for airless Mercury and the Sun).
+    // One crisp, bright fresnel rim; the bloom pass spreads it into a soft halo.
     if (b.atmo) {
-        // two shells: a tight bright rim + a soft outer halo (fake bloom bleed)
-        const a1 = atmosphereMaterial(b.atmo, b.atmoPow, b.atmoInt);
-        const a2 = atmosphereMaterial(b.atmo, b.atmoPow * 0.6, b.atmoInt * 0.5);
-        shaderMats.push(a1, a2);
-        group.add(new THREE.Mesh(new THREE.SphereGeometry(b.radius * 1.02, 96, 96), a1));
-        group.add(new THREE.Mesh(new THREE.SphereGeometry(b.radius * 1.09, 96, 96), a2));
+        const a = atmosphereMaterial(b.atmo, b.atmoPow, b.atmoInt);
+        shaderMats.push(a);
+        group.add(new THREE.Mesh(new THREE.SphereGeometry(b.radius * 1.025, 96, 96), a));
     }
 
     group.visible = false;
@@ -333,6 +349,31 @@ function updateUI(inIntro, active, p) {
     document.getElementById('hud-fill').style.width = (G * 100).toFixed(1) + '%';
 }
 
+/* ---------- Post-processing: selective bloom ---------- */
+let composer = null, bloomPass = null, useComposer = false;
+
+function setupComposer() {
+    const ready = ['EffectComposer', 'RenderPass', 'ShaderPass', 'UnrealBloomPass', 'GammaCorrectionShader']
+        .every(c => typeof THREE[c] !== 'undefined');
+    if (!ready) {
+        console.warn('Post-processing modules missing — falling back to direct render.');
+        renderer.outputEncoding = THREE.sRGBEncoding;   // keep colours correct without the gamma pass
+        return;
+    }
+    const w = window.innerWidth, h = window.innerHeight;
+    const rt = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType });   // HDR for real bloom
+    composer = new THREE.EffectComposer(renderer, rt);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.setSize(w, h);
+    composer.addPass(new THREE.RenderPass(scene, camera));
+    // (resolution, strength, radius, threshold) — threshold makes only bright
+    // pixels bloom, so brighter worlds (and the Sun) glow far more, smoothly.
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), 0.85, 0.6, 0.65);
+    composer.addPass(bloomPass);
+    composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));   // linear → sRGB for the screen
+    useComposer = true;
+}
+
 /* ---------- Render loop ---------- */
 let lastFov = 45;
 function render() {
@@ -374,19 +415,22 @@ function render() {
     sky.rotation.y += 0.00018;
 
     updateUI(inIntro, active, p);
-    renderer.render(scene, camera);
+    if (useComposer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(render);
 }
 
 /* ---------- Resize ---------- */
 function resize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    const w = window.innerWidth, h = window.innerHeight;
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(w, h);
+    if (composer) { composer.setSize(w, h); bloomPass.setSize(w, h); }
 }
 window.addEventListener('resize', resize);
 
 /* ---------- Boot ---------- */
+setupComposer();
 resize();
 buildBody(0);   // Neptune ready before the intro ends
 onScroll();
